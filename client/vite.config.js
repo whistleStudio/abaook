@@ -15,8 +15,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 字符串简写写法
-      '/api': 'http://localhost:8011',
+      '/api': {
+        target: 'http://127.0.0.1:8011',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\/api/, '')
+      },
     }
   }
 })

@@ -1,4 +1,4 @@
-var bodyParser = require('body-parser');
+// var bodyParser = require('body-parser');
 var STS = require('qcloud-cos-sts');
 var express = require('express');
 
@@ -36,23 +36,25 @@ var config = {
 
 // 创建临时密钥服务
 var app = express();
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // 支持跨域访问
-app.all('*', function (req, res, next) {
-    res.header('Content-Type', 'application/json');
-    res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:88');
-    res.header('Access-Control-Allow-Headers', 'origin,accept,content-type');
-    if (req.method.toUpperCase() === 'OPTIONS') {
-        res.end();
-    } else {
-        next();
-    }
-});
+// app.all('*', function (req, res, next) {
+//     res.header('Content-Type', 'application/json');
+//     res.header('Access-Control-Allow-Origin', "*"); // , 'http://127.0.0.1:88'
+//     res.header('Access-Control-Allow-Headers', 'origin,accept,content-type');
+//     if (req.method.toUpperCase() === 'OPTIONS') {
+//         res.end();
+//     } else {
+//         next();
+//     }
+// });
 
 // 临时密钥接口
-app.all('/api/sts', function (req, res, next) {
-
+app.get('/api/sts', (req, res) => {
+    console.log("sts")
     // TODO 这里根据自己业务需要做好放行判断
 
     // 获取临时密钥
@@ -85,14 +87,19 @@ app.all('/api/sts', function (req, res, next) {
         policy: policy,
     }, function (err, tempKeys) {
         var result = JSON.stringify(err || tempKeys) || '';
-        res.send(result);
+        res.send(result)
+        // res.json({data: result});
     });
-});
-app.all('*', function (req, res, next) {
-    res.writeHead(404);
-    res.send({code: 404, codeDesc: 'PageNotFound', message: '404 page not found'});
+
+    // res.json({tag: "sts"})
 });
 
+// app.all('*', function (req, res, next) {
+//     res.writeHead(404);
+//     res.send({code: 404, codeDesc: 'PageNotFound', message: '404 page not found'});
+// });
+
+app.get("/api/hello", (req, res) => res.json({err: 0}))
 // 启动签名服务
 app.listen(PORT);
 console.log(`server works on http://127.0.0.1:${PORT}`);
