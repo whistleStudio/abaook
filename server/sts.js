@@ -2,12 +2,14 @@ var bodyParser = require('body-parser');
 var STS = require('qcloud-cos-sts');
 var express = require('express');
 
+const PORT = 8011
+
 // 如果您使用了腾讯云 cvm，可以设置内部域名：设置host或endpoint为sts.internal.tencentcloudapi.com
 
 // 配置参数
 var config = {
-    secretId: 'AKIDzrfHvQtQqOo4ABA962pRr7BFCvdItSyQ', // 固定密钥
-    secretKey: 'XuBXqJhvfNvLZh6NYhokZIpEb1Pm28FI', // 固定密钥
+    secretId: '', // 固定密钥
+    secretKey: '', // 固定密钥
     proxy: '',
     durationSeconds: 1800,
     // host: 'sts.tencentcloudapi.com', // 域名，非必须，默认为 sts.tencentcloudapi.com
@@ -49,7 +51,7 @@ app.all('*', function (req, res, next) {
 });
 
 // 临时密钥接口
-app.all('/sts', function (req, res, next) {
+app.all('/api/sts', function (req, res, next) {
 
     // TODO 这里根据自己业务需要做好放行判断
 
@@ -92,5 +94,5 @@ app.all('*', function (req, res, next) {
 });
 
 // 启动签名服务
-app.listen(3000);
-console.log('app is listening at http://127.0.0.1:3000');
+app.listen(PORT);
+console.log(`server works on http://127.0.0.1:${PORT}`);

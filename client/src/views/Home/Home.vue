@@ -8,9 +8,11 @@
           api-key="8iqq40o18n64rab68l24qiagwsbd0veublv5x5hey61sjdr6"
           :init="tinymceInit"
         />
+        <input type="file" ref="uploadFile">
+        <button @click="upload">up</button>
       </div>
       <ul class="r-tag">
-        <li v-for="i in 3"></li>
+        <li v-for="i in 3" :key="i"></li>
       </ul>
     </div>
     <ul class="fliover">
@@ -26,7 +28,7 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import Editor from '@tinymce/tinymce-vue'
-
+import COS from 'cos-js-sdk-v5'
 
 const calendarOptions = reactive({
   plugins: [ dayGridPlugin, interactionPlugin ],
@@ -38,6 +40,7 @@ const tinymceInit = reactive({
   plugins: 'image code',
   toolbar: 'undo redo | link image | code',
   language: 'zh-Hans',
+  // 花时间
   language_url: 'https://unpkg.com/@jsdawn/vue3-tinymce@2.0.2/dist/tinymce/langs/zh-Hans.js',
   image_title: true,
   automatic_uploads: true,
@@ -73,6 +76,74 @@ const tinymceInit = reactive({
   },
   content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px }'
 });
+
+/* cos */
+
+const BUCKET = 'abaook-1300400818'
+const REIGON = 'ap-nanjing'
+
+const cos = new COS({
+    // getAuthorization 必选参数
+    getAuthorization: function (options, callback) {
+        console.log("xxx");
+        const url = 'http://127.0.0.1:8011/api/sts'; // url 替换成您自己的后端服务
+        const xhr = new XMLHttpRequest();
+        let data = null;
+        let credentials = null;
+        xhr.open('GET', url, true);
+        xhr.onload = function (e) {
+            try {
+              data = JSON.parse(e.target.responseText);
+              credentials = data.credentials;
+              console.log(credentials);
+            } catch (e) {
+            }
+            if (!data || !credentials) {
+              return console.error('credentials invalid:\n' + JSON.stringify(data, null, 2))
+            };
+            callback({
+              TmpSecretId: credentials.tmpSecretId,
+              TmpSecretKey: credentials.tmpSecretKey,
+              SecurityToken: credentials.sessionToken,
+              // 建议返回服务器时间作为签名的开始时间，避免用户浏览器本地时间偏差过大导致签名错误
+              StartTime: data.startTime, // 时间戳，单位秒，如：1580000000
+              ExpiredTime: data.expiredTime, // 时间戳，单位秒，如：1580000000
+          });
+        };
+        xhr.send();
+    }
+});
+
+let uploadFile = ref('uploadFile')
+
+function upload() {
+  cos.uploadFile({
+    Bucket: BUCKET, /* 填入您自己的存储桶，必须字段 */
+    Region: REIGON,  /* 存储桶所在地域，例如ap-beijing，必须字段 */
+    Key: '1.jpg',  /* 存储在桶里的对象键（例如1.jpg，a/b/test.txt），必须字段 */
+    Body: uploadFile.value, /* 必须，上传文件对象，可以是input[type="file"]标签选择本地文件后得到的file对象 */
+    SliceSize: 1024 * 1024 * 5,     /* 触发分块上传的阈值，超过5MB使用分块上传，非必须 */
+    onTaskReady: function(taskId) {                   /* 非必须 */
+        console.log(taskId);
+    },
+    onProgress: function (progressData) {           /* 非必须 */
+        console.log(JSON.stringify(progressData));
+    },
+    onFileFinish: function (err, data, options) {   /* 非必须 */
+       console.log(options.Key + '上传' + (err ? '失败' : '完成'));
+    },
+    // 支持自定义headers 非必须
+    // Headers: {
+    //   'x-cos-meta-test': 123
+    // },
+}, function(err, data) {
+    console.log(err || data);
+});
+
+}
+
+
+console.log("home over")
 </script>
 
 <style scoped lang="scss">

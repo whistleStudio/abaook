@@ -12,5 +12,11 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  server: {
+    proxy: {
+      // 字符串简写写法
+      '/api': 'http://localhost:8011',
+    }
   }
 })
