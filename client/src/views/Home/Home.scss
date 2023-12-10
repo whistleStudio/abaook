@@ -1,0 +1,46 @@
+.main {
+    // background-color: red;
+    justify-content: space-between;
+    position: relative;
+    .left {
+      width: 49%;
+    }
+    .right {
+      width: 49%;
+      height: 100%;
+      position: relative;
+      // background-color: orange;
+      .r-content {
+        width: calc(100% - 3rem);
+        height: 90%;
+      }
+      ul.r-tag {
+        position: absolute;
+        top: 5%;
+        right: 0;
+        li {
+          width: 3rem;
+          height: 10rem;
+          box-sizing: border-box;
+          border: 1px solid burlywood;
+        }
+      }
+    }
+    ul.fliover {
+      width: 100%;
+      position: absolute;
+      li {
+        width: 3rem;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        &:first-of-type {
+          left: -3rem;
+        }
+        &:last-of-type {
+          right: -3rem;
+        }
+      }
+    }
+  }

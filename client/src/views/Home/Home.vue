@@ -3,13 +3,16 @@
     <FullCalendar class="left" :options="calendarOptions" />
     <div class="right flex-row">
       <div class="r-content box-grey">
-        <img alt="Vue logo" class="logo" src="../../assets/logo.svg" width="125" height="125" />
-        <Editor
+        <!-- <img alt="Vue logo" class="logo" src="../../assets/logo.svg" width="125" height="125" /> -->
+        <Editor ref="myEditor" id="myEditor"
           api-key="8iqq40o18n64rab68l24qiagwsbd0veublv5x5hey61sjdr6"
-          :init="tinymceInit"
+
+          :disabled="isEditorDis"
         />
+        <!-- <textarea id="myEditor">Hello, World!</textarea> -->
         <input type="file" ref="uploadFile">
-        <button @click="upload">up</button>
+        <button @click="setTinyContent">up</button>
+        <button @click="isEditorDis = !isEditorDis">disabled</button>
       </div>
       <ul class="r-tag">
         <li v-for="i in 3" :key="i"></li>
@@ -23,7 +26,7 @@
 </template>
 
 <script setup>
-import {ref, reactive} from "vue"
+import {ref, reactive, onActivated, onMounted} from "vue"
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -34,14 +37,14 @@ const calendarOptions = reactive({
   plugins: [ dayGridPlugin, interactionPlugin ],
   initialView: 'dayGridMonth',
 });
-
+// 富文本编辑器设置
 const tinymceInit = reactive({
-  selector: 'textarea#file-picker',
+  selector: '#myEditor',
   plugins: 'image code',
-  toolbar: 'undo redo | link image | code',
-  language: 'zh-Hans',
-  // 花时间
-  language_url: 'https://unpkg.com/@jsdawn/vue3-tinymce@2.0.2/dist/tinymce/langs/zh-Hans.js',
+  // toolbar: 'basicDateButton selectiveDateButton toggleDateButton splitDateButton menuDateButton',
+  // language: 'zh-Hans',
+  // language_url: 'https://unpkg.com/@jsdawn/vue3-tinymce@2.0.2/dist/tinymce/langs/zh-Hans.js',
+  // language_url: 'https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/tingymce/zh-Hans.js',
   image_title: true,
   automatic_uploads: true,
   file_picker_types: 'image',
@@ -76,6 +79,22 @@ const tinymceInit = reactive({
   },
   content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px }'
 });
+
+let content = `
+<h1>Hello from Tiny!</h1>
+<p>This is Editor Content!</p>
+`;
+onMounted(()=>{
+  setTimeout(()=>{tinymce.activeEditor.setContent(content);},500)
+})
+
+function setTinyContent() {
+  tinymce.activeEditor.execCommand('Italic');
+  tinymce.activeEditor.execCommand('InsertImage', false, 'https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202023-10-11%20224608.png');
+}
+
+const myEditor = ref()
+const isEditorDis = ref(false)
 
 /* cos */
 
@@ -117,7 +136,7 @@ const cos = new COS({
 let uploadFile = ref('uploadFile')
 
 function upload() {
-  console.log(uploadFile.value.files[0])
+  // console.log(uploadFile.value.files[0])
 
   // fetch("/api/hello")
   // .then(res => res.json()
@@ -153,50 +172,5 @@ console.log("home over")
 </script>
 
 <style scoped lang="scss">
-  .main {
-    // background-color: red;
-    justify-content: space-between;
-    position: relative;
-    .left {
-      width: 49%;
-    }
-    .right {
-      width: 49%;
-      height: 100%;
-      position: relative;
-      // background-color: orange;
-      .r-content {
-        width: calc(100% - 3rem);
-        height: 90%;
-      }
-      ul.r-tag {
-        position: absolute;
-        top: 5%;
-        right: 0;
-        li {
-          width: 3rem;
-          height: 10rem;
-          box-sizing: border-box;
-          border: 1px solid burlywood;
-        }
-      }
-    }
-    ul.fliover {
-      width: 100%;
-      position: absolute;
-      li {
-        width: 3rem;
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        &:first-of-type {
-          left: -3rem;
-        }
-        &:last-of-type {
-          right: -3rem;
-        }
-      }
-    }
-  }
+  @import './Home.scss';
 </style>
