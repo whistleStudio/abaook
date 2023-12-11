@@ -46,3 +46,10 @@ ul {
   box-sizing: border-box;
   border: 1px solid grey;
 }
+
+.poa-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}

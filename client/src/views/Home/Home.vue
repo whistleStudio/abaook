@@ -1,27 +1,31 @@
 <template>
   <div class="main flex-row">
-    <FullCalendar class="left" :options="calendarOptions" />
+    <div class="left">
+      <FullCalendar class="calen" :options="calendarOptions" />
+    </div>
     <div class="right flex-row">
-      <div class="r-content box-grey">
+      <div class="r-content">
         <!-- <img alt="Vue logo" class="logo" src="../../assets/logo.svg" width="125" height="125" /> -->
-        <Editor ref="myEditor" id="myEditor"
+        <Editor ref="myEditor" id="myEditor" v-model="editorContent"
           api-key="8iqq40o18n64rab68l24qiagwsbd0veublv5x5hey61sjdr6"
-
+          :init = "tinymceInit"
           :disabled="isEditorDis"
         />
         <!-- <textarea id="myEditor">Hello, World!</textarea> -->
-        <input type="file" ref="uploadFile">
+        <!-- <input type="file" ref="uploadFile"> -->
         <button @click="setTinyContent">up</button>
         <button @click="isEditorDis = !isEditorDis">disabled</button>
+        <button @click="console.log(editorContent)">get</button>
       </div>
       <ul class="r-tag">
         <li v-for="i in 3" :key="i"></li>
       </ul>
     </div>
     <ul class="fliover">
-      <li>&lt;</li>
-      <li>&gt;</li>
+      <li></li>
+      <li></li>
     </ul>
+    <div class="deco-line poa-center"></div>
   </div>
 </template>
 
@@ -31,7 +35,9 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import Editor from '@tinymce/tinymce-vue'
-import COS from 'cos-js-sdk-v5'
+import myCos from "../../utils/cos"
+
+const editorContent = ref(``);
 
 const calendarOptions = reactive({
   plugins: [ dayGridPlugin, interactionPlugin ],
@@ -40,43 +46,30 @@ const calendarOptions = reactive({
 // 富文本编辑器设置
 const tinymceInit = reactive({
   selector: '#myEditor',
-  plugins: 'image code',
-  // toolbar: 'basicDateButton selectiveDateButton toggleDateButton splitDateButton menuDateButton',
-  // language: 'zh-Hans',
-  // language_url: 'https://unpkg.com/@jsdawn/vue3-tinymce@2.0.2/dist/tinymce/langs/zh-Hans.js',
-  // language_url: 'https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/tingymce/zh-Hans.js',
-  image_title: true,
-  automatic_uploads: true,
-  file_picker_types: 'image',
-  file_picker_callback: (cb, value, meta) => {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
+  // plugins: 'image ',
+  toolbar: 'my-image',
+  setup: (editor) => {
+    editor.ui.registry.addButton('my-image', {
+      icon: 'image',
+      // onAction: () => editor.windowManager.open(dialogConfig)
+      onAction: () => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
 
-    input.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        /*
-          Note: Now we need to register the blob in TinyMCEs image blob
-          registry. In the next release this part hopefully won't be
-          necessary, as we are looking to handle it internally.
-        */
-        const id = 'blobid' + (new Date()).getTime();
-        const blobCache =  tinymce.activeEditor.editorUpload.blobCache;
-        const base64 = reader.result.split(',')[1];
-        const blobInfo = blobCache.create(id, file, base64);
-        blobCache.add(blobInfo);
-
-        /* call the callback and populate the Title field with the file name */
-        cb(blobInfo.blobUri(), { title: file.name });
-      });
-      reader.readAsDataURL(file);
-    });
-
-    input.click();
+        input.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          console.log(file)
+          myCos.cosUpload(file, tinymce)
+          // upload(file)
+        })
+        input.click()
+      }
+    })
   },
+  language: 'zh-Hans',
+  // language_url: 'https://unpkg.com/@jsdawn/vue3-tinymce@2.0.2/dist/tinymce/langs/zh-Hans.js',
+  language_url: 'https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/tingymce/zh-Hans.js',
   content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:16px }'
 });
 
@@ -85,7 +78,8 @@ let content = `
 <p>This is Editor Content!</p>
 `;
 onMounted(()=>{
-  setTimeout(()=>{tinymce.activeEditor.setContent(content);},500)
+  // setTimeout(()=>{tinymce.onS},1000)
+
 })
 
 function setTinyContent() {
@@ -95,78 +89,6 @@ function setTinyContent() {
 
 const myEditor = ref()
 const isEditorDis = ref(false)
-
-/* cos */
-
-const BUCKET = 'abaook-1300400818'
-const REIGON = 'ap-nanjing'
-
-const cos = new COS({
-    // getAuthorization 必选参数
-    getAuthorization: function (options, callback) {
-        console.log("xxx");
-        const url = '/api/sts'; // url 替换成您自己的后端服务
-        const xhr = new XMLHttpRequest();
-        let data = null;
-        let credentials = null;
-        xhr.open('GET', url, true);
-        xhr.onload = function (e) {
-            try {
-              data = JSON.parse(e.target.responseText);
-              credentials = data.credentials;
-              console.log(credentials);
-            } catch (e) {
-            }
-            if (!data || !credentials) {
-              return console.error('credentials invalid:\n' + JSON.stringify(data, null, 2))
-            };
-            callback({
-              TmpSecretId: credentials.tmpSecretId,
-              TmpSecretKey: credentials.tmpSecretKey,
-              SecurityToken: credentials.sessionToken,
-              // 建议返回服务器时间作为签名的开始时间，避免用户浏览器本地时间偏差过大导致签名错误
-              StartTime: data.startTime, // 时间戳，单位秒，如：1580000000
-              ExpiredTime: data.expiredTime, // 时间戳，单位秒，如：1580000000
-          });
-        };
-        xhr.send();
-    }
-});
-
-let uploadFile = ref('uploadFile')
-
-function upload() {
-  // console.log(uploadFile.value.files[0])
-
-  // fetch("/api/hello")
-  // .then(res => res.json()
-  // .then(data => console.log(data)))
-
-  cos.uploadFile({
-    Bucket: BUCKET, /* 填入您自己的存储桶，必须字段 */
-    Region: REIGON,  /* 存储桶所在地域，例如ap-beijing，必须字段 */
-    Key: uploadFile.value.files[0].name,  /* 存储在桶里的对象键（例如1.jpg，a/b/test.txt），必须字段 */
-    Body: uploadFile.value.files[0], /* 必须，上传文件对象，可以是input[type="file"]标签选择本地文件后得到的file对象 */
-    SliceSize: 1024 * 1024 * 5,     /* 触发分块上传的阈值，超过5MB使用分块上传，非必须 */
-    onTaskReady: function(taskId) {                   /* 非必须 */
-        console.log(taskId);
-    },
-    onProgress: function (progressData) {           /* 非必须 */
-        console.log(JSON.stringify(progressData));
-    },
-    onFileFinish: function (err, data, options) {   /* 非必须 */
-       console.log(options.Key + '上传' + (err ? '失败' : '完成'));
-    },
-    // 支持自定义headers 非必须
-    // Headers: {
-    //   'x-cos-meta-test': 123
-    // },
-  }, function(err, data) {
-      console.log(err || data);
-  });
-
-}
-
 
 console.log("home over")
 </script>
