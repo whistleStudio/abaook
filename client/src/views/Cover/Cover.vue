@@ -18,5 +18,8 @@ const router = useRouter()
   background: url(https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/abao/cover/%E6%89%8B%E8%B4%A6%E5%B0%8F%E5%AE%9D-01.png) center/contain no-repeat;
   border-radius: 20%;
   cursor: pointer;
+  &:hover {
+    background: url(https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/abao/cover/%E6%89%8B%E8%B4%A6%E5%B0%8F%E5%AE%9D-02.png) center/contain no-repeat;
+  }
 }
 </style>

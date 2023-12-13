@@ -12,15 +12,19 @@
           :disabled="isEditorDis"
         />
         <div class="r-content-foot flex-row">
-          <button @click="test">test</button>
+          <div class="icon" @click="isEditorDis = !isEditorDis" 
+          :style="{backgroundImage: isEditorDis ? 'url(https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/abao/home/icons/icon_edit.png)':'url(https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/abao/home/icons/icon_read.png)'}"></div>
+          <div class="icon" @click="saveNote" 
+          :style="{backgroundImage: 'url(https://abaook-1300400818.cos.ap-nanjing.myqcloud.com/abao/home/icons/icon_save.png)'}"></div>
+          <!-- <button @click="test">test</button>
           <button @click="isEditorDis = !isEditorDis">{{ isEditorDis ? "编辑" : "阅读" }}</button>
           <button @click="saveNote">保存</button>
-          <button>第{{ curPageNum }}页</button>
+          <button>第{{ curPageNum }}页</button> -->
         </div>
       </div>
-      <ul class="r-tag">
+      <!-- <ul class="r-tag">
         <li v-for="i in 3" :key="i"></li>
-      </ul>
+      </ul> -->
     </div>
     <ul class="fliover">
       <li @click="flioverClick(-1)"></li>
@@ -32,6 +36,7 @@
     <Modal1 v-if="modalType" title="🙀" :body="modalList[modalType]" btn-l="取消" btn-r="确定"
     @cancelEvent="modalType=0" @confirmEvent="modalConfirm"/>
 
+    <div class="logo"></div>
   </div>
   
 </template>
@@ -97,26 +102,41 @@ const tinymceInit = reactive({
 /* 保存 */
 function saveNote () {
   if (curContent.value) {
-    reqSave({content: curContent.value, curPageNum: curPageNum.value})
-    oldContent = curContent.value
+    reqSave({content: curContent.value, curPageNum: curPageNum.value, isInserted})
+    // oldContent = curContent.value
   } else if (oldContent) {
-    // 旧内容被清空
+    // 清空文本后保存，提示是否删除
     modalType.value = 2
   }
 }
 
-function reqSave ({content, curPageNum}) {
+function reqSave ({content, curPageNum, isInserted}) {
   fetch("/api/doc/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({content, curPageNum})
+    body: JSON.stringify({content, curPageNum, isInserted})
   })
   .then(res => res.json())
   .then(({err}) => {
     if (!err) {
       alert("😸保存成功")
+      oldContent = curContent.value
       isInserted = false // 若是插入，成功保存后，改变状态
     }
+  })
+}
+
+/* 删除(保存空) */
+function reqDelNote () {
+  fetch(`/api/doc/delNote?curPageNum=${curPageNum.value}`)
+  .then(res => res.json())
+  .then(({err}) => {
+    console.log("del ", err)
+    emptyNote()
+    ;(async () => {
+      const err = await reqGetContent(curPageNum.value)
+      if (err == -1) isInserted = true
+    })()
   })
 }
 
@@ -139,62 +159,55 @@ function reqGetContent (pageNum) {
 /* 插入 */
 function insertNote () {
   if (curContent.value == oldContent) {
-    if (curContent.value) reqInsertNote() // 未编辑修改且有内容时直接增加
+    if (curContent.value) {emptyNote(); isInserted = true} // 未编辑修改且有内容时直接增加
     // 无内容时，不需要操作（不允许空笔记）
   } else {
     modalType.value = 1
   }
 }
 
-function reqInsertNote () {
-  fetch(`/api/doc/insertNote?curPageNum=${curPageNum.value}`)
-  .then(res => res.json())
-  .then(({err}) => {
-    console.log(err)
-    if (!err) {
-      emptyNote()
-      isInserted = true
-    }
-  })
-}
+// function reqInsertNote () {
+//   fetch(`/api/doc/insertNote?curPageNum=${curPageNum.value}`)
+//   .then(res => res.json())
+//   .then(({err}) => {
+//     console.log(err)
+//     if (!err) {
+//       emptyNote()
+//       isInserted = true
+//     }
+//   })
+// }
 
 /* 取消插入 */
-function cancelInsertNote () { console.log("ccc");if (isInserted && !oldContent) reqCancelInsertNote() }
+// function cancelInsertNote () { console.log("ccc");if (isInserted && !oldContent) reqCancelInsertNote() }
 
-function reqCancelInsertNote () {
-  return new Promise((rsv, rej) => {
-    fetch(`/api/doc/cancelInsertNote?curPageNum=${curPageNum.value}`)
-      .then(res => res.json())
-      .then(({err}) => {
-        console.log("cancel ", err)
-        rsv(err)
-      })
-  })
-}
+// function reqCancelInsertNote () {
+//   return new Promise((rsv, rej) => {
+//     fetch(`/api/doc/cancelInsertNote?curPageNum=${curPageNum.value}`)
+//       .then(res => res.json())
+//       .then(({err}) => {
+//         console.log("cancel ", err)
+//         rsv(err)
+//       })
+//   })
+// }
 
-/* 删除 */
-function reqDelNote () {
-  fetch(`/api/doc/delNote?curPageNum=${curPageNum.value}`)
-  .then(res => res.json())
-  .then(({err}) => {
-    console.log("del ", err)
-    reqGetContent(curPageNum.value)
-    emptyNote()
-  })
-}
+
 
 /* 内容清空 */
 function emptyNote () {curContent.value="";oldContent="";console.log("empty");}
 
 /* 翻页 */
 function flioverClick (overPages) {
-  if (curPageNum.value == 0 && overPages<0) alert("😼已经是首页咯")
+  if (curPageNum.value == 0 && overPages<0) alert("😼 已经是首页咯")
   else {
     if (curContent.value == oldContent) {
       ;(async () => {
-        if (isInserted) await reqCancelInsertNote()
+        // if (isInserted) await reqCancelInsertNote()
+        if (isInserted && overPages>0) overPages = 0 
         const err = await reqGetContent(curPageNum.value + overPages)
         if (!err) {curPageNum.value += overPages}
+        else if (err == -1) alert("😼 已经是最后一页咯")
       })()
     } else {
       // 内容有未保存改动
@@ -206,18 +219,21 @@ function flioverClick (overPages) {
 /* 模态框确定 */
 function modalConfirm () {
   switch (modalType.value) {
-    case 1: reqInsertNote(); break;
+    case 1: emptyNote(); isInserted = true; break;
     case 2: reqDelNote(); break;
     case 3, -3:
       const f = modalType.value 
       ;(async () => {
-        if (!oldContent && isInserted) {
-          // 当前为插入页, 需要先丢弃
-          await reqCancelInsertNote()
-        }
-        const err = await reqGetContent( f<0 ? curPageNum.value-1 : curPageNum.value) // 下一页, curPageNum不变；上一页, curPageNum-1
-        if (!err) {if (f < 0) curPageNum.value --}
-        else if (err == -1) alert("😼已经是最后一页咯")
+        // if (!oldContent && isInserted) {
+        //   // 当前为插入页, 需要先丢弃
+        //   await reqCancelInsertNote()
+        // }
+        let dp = 0;
+        if (f < 0) dp = -1
+        else if (!isInserted) dp = 1
+        const err = await reqGetContent(curPageNum.value + dp) // 下一页, curPageNum不变；上一页, curPageNum-1
+        if (!err) curPageNum.value += dp
+        else if (err == -1) alert("😼 已经是最后一页咯")
       })()
       break;
   }
@@ -226,12 +242,15 @@ function modalConfirm () {
 
 onMounted(()=>{
   setTimeout(()=>{
-    reqGetContent(0)
+    ;(async () => {
+      const err = await reqGetContent(0)
+      if (err == -1) isInserted = true
+    })()
   },1000)
 })
 
 onBeforeUnmount(() => {
-  cancelInsertNote()
+  // cancelInsertNote()
 })
 </script>
 

@@ -2,15 +2,18 @@ const express = require("express")
 const rt = express.Router()
 const Doc = require("../db/Doc")
 
-/* 保存 */
+/* 保存-新增插入页/修改已有页 */
 rt.post("/save", (req, res) => {
   console.log(req.body)
-  const {content, curPageNum} = req.body
+  const {content, curPageNum, isInserted} = req.body
   ;(async () => {
     try {
-      const doc = await Doc.findOne({pageNum: curPageNum})
-      if (doc) await Doc.updateOne({pageNum: curPageNum}, {content}) //有 - 更新
-      else await Doc.create({content, pageNum: curPageNum})
+      if (isInserted) {
+        await Doc.updateMany({pageNum: {$gte: curPageNum}}, {$inc: { pageNum: 1 }})
+        await Doc.create({content, pageNum: curPageNum})
+      } else {
+        await Doc.updateOne({pageNum: curPageNum}, {content})
+      }
       res.json({err: 0})
     } catch(e){res.json({err: 5})}
   })()
