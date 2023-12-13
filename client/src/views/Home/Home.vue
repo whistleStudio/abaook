@@ -15,6 +15,7 @@
           <button @click="test">test</button>
           <button @click="isEditorDis = !isEditorDis">{{ isEditorDis ? "编辑" : "阅读" }}</button>
           <button @click="saveNote">保存</button>
+          <button>第{{ curPageNum }}页</button>
         </div>
       </div>
       <ul class="r-tag">
@@ -22,21 +23,21 @@
       </ul>
     </div>
     <ul class="fliover">
-      <li></li>
-      <li></li>
+      <li @click="flioverClick(-1)"></li>
+      <li @click="flioverClick(1)"></li>
     </ul>
     <div class="insert poa-center" @click="insertNote"></div>
     <div class="deco-line poa-center"></div>
 
-    <Modal1 v-if="isHintSaveShow" title="提示" body="当前内容尚未保存, 是否继续" btn-l="取消" btn-r="确定"
-    @cancelEvent="isHintSaveShow=false" @confirmEvent="reqInsertNote"/>
+    <Modal1 v-if="modalType" title="🙀" :body="modalList[modalType]" btn-l="取消" btn-r="确定"
+    @cancelEvent="modalType=0" @confirmEvent="modalConfirm"/>
 
   </div>
   
 </template>
 
 <script setup>
-import {ref, reactive, onActivated, onMounted} from "vue"
+import {ref, reactive, onActivated, onMounted, onUnmounted, onBeforeUnmount} from "vue"
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -45,9 +46,19 @@ import myCos from "../../utils/cos"
 import Modal1 from "../../components/Modal1.vue"
 
 const myEditor = ref()
-const curContent = ref(``), oldContent = ref(""), isEditorDis = ref(false), curPageNum = ref(0), isSaved = ref(false), 
-isHintSaveShow = ref(false)
+const curContent = ref(``), isEditorDis = ref(false), curPageNum = ref(0), isSaved = ref(false),
+// 0-隐藏；1-保存；2-清空 
+modalType = ref(0)
+const modalList = {
+  0: "",
+  1: "当前内容未保存，是否插入新纸张",
+  2: "当前内容为空，是否删除此页",
+  3: "当前内容未保存，是否翻至下一页",
+  "-3": "当前内容未保存，是否翻至上一页", 
+}
 
+let oldContent = ""
+let isInserted = false
 
 /* 日历 */
 const calendarOptions = reactive({
@@ -85,7 +96,13 @@ const tinymceInit = reactive({
 
 /* 保存 */
 function saveNote () {
-  if (curContent.value) reqSave({content: curContent.value, curPageNum: curPageNum.value})
+  if (curContent.value) {
+    reqSave({content: curContent.value, curPageNum: curPageNum.value})
+    oldContent = curContent.value
+  } else if (oldContent) {
+    // 旧内容被清空
+    modalType.value = 2
+  }
 }
 
 function reqSave ({content, curPageNum}) {
@@ -97,30 +114,35 @@ function reqSave ({content, curPageNum}) {
   .then(res => res.json())
   .then(({err}) => {
     if (!err) {
-      alert("save success!")
+      alert("😸保存成功")
+      isInserted = false // 若是插入，成功保存后，改变状态
     }
   })
 }
 
 /* 获取 */
 function reqGetContent (pageNum) {
-  fetch(`/api/doc/getContent?pageNum=${pageNum}`)
-  .then(res => res.json())
-  .then(({err, content}) => {
-    if (!err) {
-      tinymce.activeEditor.execCommand('InsertHTML', false, content);
-      oldContent.value = content
-    }
+  return new Promise((rsv, rej) => {
+    fetch(`/api/doc/getContent?pageNum=${pageNum}`)
+    .then(res => res.json())
+    .then(({err, content}) => {
+      if (!err) {
+        curContent.value = content
+        oldContent = curContent.value
+        isInserted = false
+      }
+      rsv(err) 
+    })
   })
 }
 
 /* 插入 */
 function insertNote () {
-  if (curContent.value == oldContent.value) {
+  if (curContent.value == oldContent) {
     if (curContent.value) reqInsertNote() // 未编辑修改且有内容时直接增加
     // 无内容时，不需要操作（不允许空笔记）
   } else {
-    isHintSaveShow.value = true
+    modalType.value = 1
   }
 }
 
@@ -131,19 +153,85 @@ function reqInsertNote () {
     console.log(err)
     if (!err) {
       emptyNote()
+      isInserted = true
     }
   })
 }
 
-/* 清空 */
-function emptyNote () {tinymce.activeEditor.execCommand('InsertHTML', false, "");}
+/* 取消插入 */
+function cancelInsertNote () { console.log("ccc");if (isInserted && !oldContent) reqCancelInsertNote() }
 
+function reqCancelInsertNote () {
+  return new Promise((rsv, rej) => {
+    fetch(`/api/doc/cancelInsertNote?curPageNum=${curPageNum.value}`)
+      .then(res => res.json())
+      .then(({err}) => {
+        console.log("cancel ", err)
+        rsv(err)
+      })
+  })
+}
+
+/* 删除 */
+function reqDelNote () {
+  fetch(`/api/doc/delNote?curPageNum=${curPageNum.value}`)
+  .then(res => res.json())
+  .then(({err}) => {
+    console.log("del ", err)
+    reqGetContent(curPageNum.value)
+    emptyNote()
+  })
+}
+
+/* 内容清空 */
+function emptyNote () {curContent.value="";oldContent="";console.log("empty");}
+
+/* 翻页 */
+function flioverClick (overPages) {
+  if (curPageNum.value == 0 && overPages<0) alert("😼已经是首页咯")
+  else {
+    if (curContent.value == oldContent) {
+      ;(async () => {
+        if (isInserted) await reqCancelInsertNote()
+        const err = await reqGetContent(curPageNum.value + overPages)
+        if (!err) {curPageNum.value += overPages}
+      })()
+    } else {
+      // 内容有未保存改动
+      modalType.value = 3 * overPages
+    }
+  }
+}
+
+/* 模态框确定 */
+function modalConfirm () {
+  switch (modalType.value) {
+    case 1: reqInsertNote(); break;
+    case 2: reqDelNote(); break;
+    case 3, -3:
+      const f = modalType.value 
+      ;(async () => {
+        if (!oldContent && isInserted) {
+          // 当前为插入页, 需要先丢弃
+          await reqCancelInsertNote()
+        }
+        const err = await reqGetContent( f<0 ? curPageNum.value-1 : curPageNum.value) // 下一页, curPageNum不变；上一页, curPageNum-1
+        if (!err) {if (f < 0) curPageNum.value --}
+        else if (err == -1) alert("😼已经是最后一页咯")
+      })()
+      break;
+  }
+  modalType.value = 0
+}
 
 onMounted(()=>{
   setTimeout(()=>{
     reqGetContent(0)
   },1000)
+})
 
+onBeforeUnmount(() => {
+  cancelInsertNote()
 })
 </script>
 

@@ -5,8 +5,8 @@ const rt = express.Router()
 
 // 配置参数
 var config = {
-  secretId: '', // 固定密钥
-  secretKey: '', // 固定密钥
+  secretId: 'AKIDSs7at1zkJekOp21mJpLk05xc3OZjv5A3', // 固定密钥
+  secretKey: 'kHckePzLTPDpCSfkdK3e1A63pOktoW1S', // 固定密钥
   proxy: '',
   durationSeconds: 1800,
   // host: 'sts.tencentcloudapi.com', // 域名，非必须，默认为 sts.tencentcloudapi.com

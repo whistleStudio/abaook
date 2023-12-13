@@ -33,8 +33,30 @@ rt.get("/insertNote", (req, res) => {
     try {
       await Doc.updateMany({pageNum: {$gte: curPageNum}}, {$inc: { pageNum: 1 }})
       res.json({err: 0})
-    } catch(e) {res.json({err: 5})}
+    } catch(e) {console.log("insert err:", e);res.json({err: 5})}
   })()
 })
 
+/* 取消插入 */
+rt.get("/cancelInsertNote", (req, res) => {
+  const {curPageNum} = req.query
+  ;(async () => {
+    try {
+      await Doc.updateMany({pageNum: {$gte: curPageNum}}, {$inc: { pageNum: -1 }})
+      res.json({err: 0})
+    } catch(e) {console.log("cancel insert err:", e); res.json({err: 5})}
+  })()
+})
+
+/* 删除 */
+rt.get("/delNote", (req, res) => {
+  const {curPageNum} = req.query
+  ;(async () => {
+    try {
+      await Doc.deleteOne({pageNum: curPageNum})
+      await Doc.updateMany({pageNum: {$gte: curPageNum}}, {$inc: { pageNum: -1 }})
+      res.json({err: 0})
+    } catch(e) {console.log("delete err:", e); res.json({err: 5})}
+  })()
+})
 module.exports = rt
